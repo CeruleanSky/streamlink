@@ -48,23 +48,18 @@ args = console = streamlink = plugin = stream_fd = output = None
 log = logging.getLogger("streamlink.cli")
 
 
-def check_file_output(filename, force):
-    """Checks if file already exists and ask the user if it should
-    be overwritten if it does."""
-
+def rename_file_output(filename, force):
+    """Renames if file already exists"""
     log.debug("Checking file output")
-
-    if os.path.isfile(filename) and not force:
-        if sys.stdin.isatty():
-            answer = console.ask("File {0} already exists! Overwrite it? [y/N] ",
-                                 filename)
-
-            if answer.lower() != "y":
-                sys.exit()
+    append_number = 1
+    old_filename = filename
+    while os.path.isfile(filename) and os.path.isfile(old_filename):
+        if "." in old_filename:
+            d = old_filename.rpartition(".")
+            filename = d[0] + "_" + str(append_number) + d[1] + d[2]
         else:
-            log.error("File {0} already exists, use --force to overwrite it.".format(filename))
-            sys.exit()
-
+            filename = old_filename + "_" + str(append_number)
+        append_number += 1  
     return FileOutput(filename)
 
 
@@ -86,11 +81,11 @@ def create_output(plugin):
         if args.output == "-":
             out = FileOutput(fd=stdout)
         else:
-            out = check_file_output(args.output, args.force)
+            out = rename_file_output(args.output, args.force)
     elif args.stdout:
         out = FileOutput(fd=stdout)
     elif args.record_and_pipe:
-        record = check_file_output(args.record_and_pipe, args.force)
+        record = rename_file_output(args.record_and_pipe, args.force)
         out = FileOutput(fd=stdout, record=record)
     else:
         http = namedpipe = record = None
@@ -114,7 +109,7 @@ def create_output(plugin):
         title = create_title(plugin)
 
         if args.record:
-            record = check_file_output(args.record, args.force)
+            record = rename_file_output(args.record, args.force)
 
         log.info("Starting player: {0}".format(args.player))
 
